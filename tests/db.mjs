@@ -77,8 +77,8 @@ console.log('\n— weigh-ins drive recalibration over time —')
   check('1st weigh-in saved', r.statusCode === 200 && r.body.weighIns.length === 1)
   check('1 point → recalibration not applied', r.body.recalibration && r.body.recalibration.applied === false)
 
-  r = await weighPost({ userId: A, weight: 184, unit: 'lb', calories: 1800, date: '2026-06-04' })
-  check('2nd weigh-in (3 days later) → still pending (span < 7d)', r.body.recalibration.applied === false)
+ r = await weighPost({ userId: A, weight: 184, unit: 'lb', calories: 1800, date: '2026-06-04' })
+check('2nd weigh-in (3 days later) → applied with earlyData', r.body.recalibration.applied === true && r.body.recalibration.earlyData === true)
 
   r = await weighPost({ userId: A, weight: 183, unit: 'lb', calories: 1800, date: '2026-06-15' })
   check('3rd weigh-in (14d span) → recalibration APPLIED', r.body.recalibration.applied === true,

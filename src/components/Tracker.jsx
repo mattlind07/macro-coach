@@ -68,6 +68,23 @@ export default function Tracker({ calcResult }) {
     }
   }
 
+  async function deleteWeighIn(id) {
+    try {
+      const r = await fetch('/api/weighin', {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId, id }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'Could not delete weigh-in.')
+      setWeighIns(data.weighIns || [])
+      if (data.plan) setPlan(data.plan)
+      setRecal(data.recalibration || null)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   async function addWeighIn() {
     const weight = parseFloat(w)
     if (!weight || weight <= 0) return setError('Enter your weight.')
@@ -148,9 +165,16 @@ export default function Tracker({ calcResult }) {
 
       <WeightChart weighIns={weighIns} unit={unit} />
 
+      <WeighInHistory weighIns={weighIns} unit={unit} onDelete={deleteWeighIn} />
+
       {recal && (
         <div className={recal.applied ? 'recal-note applied' : 'recal-note pending'}>
           {recal.applied ? '↻ ' : 'ⓘ '}{recal.message || recal.reason}
+          {recal.applied && recal.earlyData && (
+            <p className="recal-early-note">
+              Best results come after 7+ consecutive days of data — early estimates may be skewed by water weight fluctuations.
+            </p>
+          )}
         </div>
       )}
 
@@ -193,6 +217,39 @@ function guessGoal(r) {
   if (r.delta < -50) return 'lose'
   if (r.delta > 50) return 'gain'
   return 'maintain'
+}
+
+// ---- weigh-in history list with delete ----
+function WeighInHistory({ weighIns, unit, onDelete }) {
+  if (!weighIns || weighIns.length === 0) return null
+
+  const toDisplay = (lbs) => (unit === 'kg' ? lbs / LB_PER_KG : lbs)
+
+  const fmt = (dateStr) => {
+    // logged_on is YYYY-MM-DD; parse as UTC to avoid timezone shifts
+    const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  return (
+    <ul className="weighin-list">
+      {[...weighIns].reverse().map((wi) => (
+        <li key={wi.id} className="weighin-item">
+          <span className="wi-date">{fmt(wi.logged_on)}</span>
+          <span className="wi-weight">{toDisplay(wi.weight_lbs).toFixed(1)} {unit}</span>
+          <button
+            className="wi-del"
+            onClick={() => onDelete(wi.id)}
+            aria-label={`Delete weigh-in for ${fmt(wi.logged_on)}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M12 3.5l-.7 7.7a1 1 0 0 1-1 .8H3.7a1 1 0 0 1-1-.8L2 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 // ---- compact dependency-free SVG trend line ----

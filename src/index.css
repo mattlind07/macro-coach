@@ -639,6 +639,44 @@ select:focus {
   border: 1px solid var(--line);
   color: var(--ink-soft);
 }
+.recal-early-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+/* weigh-in history list */
+.weighin-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.weighin-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.weighin-item:last-child { border-bottom: none; }
+.wi-date { color: var(--ink-soft); flex: 1; }
+.wi-weight { font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
+.wi-del {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--ink-faint);
+  border-radius: 4px;
+  line-height: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.wi-del:hover { color: var(--protein); background: var(--surface); }
 
 /* weigh-in form */
 .weighin-form .wf-row { display: flex; gap: 10px; margin-bottom: 10px; }

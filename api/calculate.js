@@ -16,7 +16,7 @@
 
 import { computeMacros, toLbs } from '../lib/macros.js'
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -108,7 +108,11 @@ async function askGemini({ weight, unit, currentCalories, goal, sex, activity, a
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: userMsg }] }],
-      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 700 },
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 1024,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     }),
   })
 

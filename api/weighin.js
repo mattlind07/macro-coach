@@ -5,13 +5,46 @@ import { db, ensureSchema, recalibrate } from '../lib/db.js'
 import { toLbs } from '../lib/macros.js'
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' })
+  if (req.method !== 'POST' && req.method !== 'DELETE') return res.status(405).json({ error: 'Use POST or DELETE.' })
 
   try {
     await ensureSchema()
     const sql = db()
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}
+
+    if (req.method === 'DELETE') {
+      const { userId, id } = body
+      if (!userId || !id) return res.status(400).json({ error: 'userId and id required' })
+
+      await sql`DELETE FROM weigh_ins WHERE id = ${id} AND user_id = ${userId}`
+
+      const plans = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
+      const plan = plans[0]
+      const weighIns = await sql`
+        SELECT id, logged_on, weight_lbs, calories
+        FROM weigh_ins WHERE user_id = ${userId}
+        ORDER BY logged_on ASC`
+
+      if (!plan) return res.status(200).json({ plan: null, weighIns, recalibration: null })
+
+      const recal = recalibrate(plan, weighIns)
+      if (recal.applied) {
+        await sql`
+          UPDATE plans SET
+            target_cal  = ${recal.newPlan.target_cal},
+            protein_g   = ${recal.newPlan.protein_g},
+            carbs_g     = ${recal.newPlan.carbs_g},
+            fat_g       = ${recal.newPlan.fat_g},
+            maintenance = ${recal.newPlan.maintenance},
+            updated_at  = now()
+          WHERE user_id = ${userId}`
+      }
+
+      const updated = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
+      return res.status(200).json({ plan: updated[0], weighIns, recalibration: recal })
+    }
+
     const { userId, weight, unit = 'lb', calories, date } = body
 
     if (!userId) return res.status(400).json({ error: 'userId required' })

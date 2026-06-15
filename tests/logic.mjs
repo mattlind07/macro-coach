@@ -42,9 +42,17 @@ check('floor produced a warning', fl.warnings.some((w) => /pulled up/i.test(w)))
 console.log('\n— recalibrate: guards —')
 const plan = { goal: 'lose', target_cal: 1800, maintenance: 2200, sex: 'male', weight_unit: 'lb' }
 check('needs 2+ weigh-ins', recalibrate(plan, [{ logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 }]).applied === false)
-check('rejects < 7 day span', recalibrate(plan, [
+check('3-day span now applies with earlyData flag', (() => {
+  const r = recalibrate(plan, [
+    { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
+    { logged_on: '2026-06-04', weight_lbs: 184, calories: 1800 },
+  ])
+  return r.applied === true && r.earlyData === true
+})())
+
+check('same-day entries still blocked', recalibrate(plan, [
   { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
-  { logged_on: '2026-06-04', weight_lbs: 184, calories: 1800 },
+  { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
 ]).applied === false)
 
 console.log('\n— recalibrate: measures maintenance + damps —')
