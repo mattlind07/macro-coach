@@ -206,7 +206,7 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
           {busy ? 'Saving…' : 'Log weigh-in'}
         </button>
         <p className="wf-hint">
-          Calories optional — leave blank and it assumes you hit your target. Log roughly weekly for
+          Calories optional. Leave blank and it assumes you hit your target. Log roughly weekly for
           the cleanest signal.
         </p>
       </div>
@@ -260,7 +260,7 @@ function WeighInHistory({ weighIns, unit, onDelete }) {
 // ---- compact dependency-free SVG trend line ----
 function WeightChart({ weighIns, unit }) {
   if (!weighIns || weighIns.length === 0) {
-    return <p className="chart-empty">No weigh-ins yet — log your first below.</p>
+    return <p className="chart-empty">No weigh-ins yet. Log your first below!</p>
   }
 
   const toDisplay = (lbs) => (unit === 'kg' ? lbs / LB_PER_KG : lbs)
