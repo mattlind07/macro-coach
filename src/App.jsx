@@ -2,11 +2,27 @@ import { useState } from 'react'
 import InputForm from './components/InputForm.jsx'
 import Results from './components/Results.jsx'
 import Tracker from './components/Tracker.jsx'
+import AuthModal from './components/AuthModal.jsx'
+import { getAuth, setAuth } from './lib/user.js'
 
 export default function App() {
   const [status, setStatus] = useState('idle') // idle | loading | done | error
   const [result, setResult] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
+  const [showAuth, setShowAuth] = useState(false)
+  const [authUser, setAuthUser] = useState(() => {
+    const a = getAuth()
+    return a ? { userId: a.userId, email: a.email } : null
+  })
+
+  function handleAuth(user) {
+    setAuthUser(user)
+  }
+
+  function handleLogout() {
+    setAuth(null)
+    setAuthUser(null)
+  }
 
   async function handleSubmit(payload) {
     setStatus('loading')
@@ -19,7 +35,6 @@ export default function App() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
-      // carry the goal/sex/unit through so the tracker can save them with the plan
       data.goal = payload.goal
       data.sex = payload.sex
       data.unit = payload.unit
@@ -40,8 +55,20 @@ export default function App() {
           </span>
           Macro&nbsp;Coach
         </div>
-        <p className="tagline">Turn your weight, intake, and a goal into numbers you can actually eat to.</p>
+
+        {authUser ? (
+          <div className="auth-status">
+            <span className="auth-email">{authUser.email}</span>
+            <button className="auth-btn-ghost" onClick={handleLogout}>Log out</button>
+          </div>
+        ) : (
+          <button className="auth-btn" onClick={() => setShowAuth(true)}>
+            Log in / Sign up
+          </button>
+        )}
       </header>
+
+      <p className="tagline">Turn your weight, intake, and a goal into numbers you can actually eat to.</p>
 
       <h1 className="hero">
         Stop guessing your <em>macros</em>.
@@ -56,12 +83,16 @@ export default function App() {
         <Results status={status} result={result} errorMsg={errorMsg} />
       </div>
 
-      <Tracker calcResult={status === 'done' ? result : null} />
+      <Tracker key={authUser?.userId || 'guest'} calcResult={status === 'done' ? result : null} />
 
       <p className="foot">
         Estimates for general guidance, not medical advice. Recalculate every few weeks as your
         weight changes — your maintenance moves with it.
       </p>
+
+      {showAuth && (
+        <AuthModal onClose={() => setShowAuth(false)} onAuth={handleAuth} />
+      )}
     </div>
   )
 }

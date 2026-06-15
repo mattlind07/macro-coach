@@ -11,15 +11,6 @@ before you add a key.
 - **Database:** Supabase Postgres via `postgres` npm package (transaction pooler, port 6543)
 - **Deploy:** Vercel (no server to manage)
 
-### Environment variables
-
-Copy `.env.example` to `.env.local` and fill in your values.
-
-`DATABASE_URL` must be the **transaction pooler** connection string from Supabase
-(Project Settings → Database → Connection pooling → Transaction mode, port **6543**).
-Prepared statements are disabled (`prepare: false`) because the transaction pooler
-does not support them.
-
 ## How it decides the numbers
 
 It treats your *current typical intake* as your maintenance calories (a roughly
@@ -50,4 +41,4 @@ macros. Each update is damped to ±250 kcal so a single water-weight blip can't
 swing your plan around. This is in `lib/db.js` (`recalibrate`).
 
 No login: each browser gets a random anonymous id (localStorage) that keys its data
-in Postgres. Swap in real auth later without changing the API.
+in Postgres.

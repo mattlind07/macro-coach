@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // In production the /api routes are Vercel serverless functions.
@@ -8,6 +8,11 @@ function apiPlugin() {
   return {
     name: 'vite-api',
     configureServer(server) {
+      // Load all .env.local vars (no prefix filter) into process.env so API
+      // handlers can read DATABASE_URL, JWT_SECRET, etc. during `npm run dev`.
+      const env = loadEnv('development', process.cwd(), '')
+      Object.assign(process.env, env)
+
       const handlers = {}
 
       server.middlewares.use('/api', async (req, res, next) => {
