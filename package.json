@@ -11,7 +11,7 @@
     "test": "node tests/logic.mjs && node tests/calculate.mjs && node tests/db.mjs"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
+    "postgres": "^3.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

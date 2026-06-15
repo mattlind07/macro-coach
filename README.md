@@ -8,7 +8,17 @@ before you add a key.
 
 - **Frontend:** React + Vite (plain JS)
 - **Backend:** one Vercel serverless function (`/api/calculate.js`, Node)
+- **Database:** Supabase Postgres via `postgres` npm package (transaction pooler, port 6543)
 - **Deploy:** Vercel (no server to manage)
+
+### Environment variables
+
+Copy `.env.example` to `.env.local` and fill in your values.
+
+`DATABASE_URL` must be the **transaction pooler** connection string from Supabase
+(Project Settings → Database → Connection pooling → Transaction mode, port **6543**).
+Prepared statements are disabled (`prepare: false`) because the transaction pooler
+does not support them.
 
 ## How it decides the numbers
 
