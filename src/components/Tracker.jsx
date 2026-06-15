@@ -1,0 +1,240 @@
+import { useEffect, useMemo, useState } from 'react'
+import { getUserId } from '../lib/user.js'
+
+const LB_PER_KG = 2.20462
+
+export default function Tracker({ calcResult }) {
+  const userId = useMemo(() => getUserId(), [])
+  const [plan, setPlan] = useState(null)
+  const [weighIns, setWeighIns] = useState([])
+  const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState('')
+
+  // Active weight unit: a saved plan's unit wins; otherwise the unit the user
+  // just calculated in; default lb. (Fixes the bug where a kg calculation was
+  // saved/displayed as lb.)
+  const unit = plan?.weight_unit || calcResult?.unit || 'lb'
+
+  // weigh-in form
+  const [w, setW] = useState('')
+  const [cals, setCals] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [recal, setRecal] = useState(null)
+
+  // load any saved plan + history on mount
+  useEffect(() => {
+    if (!userId) return
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/plan?userId=${encodeURIComponent(userId)}`)
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error || 'Could not load your tracker.')
+        if (data.plan) {
+          setPlan(data.plan)
+        }
+        setWeighIns(data.weighIns || [])
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoaded(true)
+      }
+    })()
+  }, [userId])
+
+  async function startTracking() {
+    if (!calcResult) return
+    setError('')
+    try {
+      const r = await fetch('/api/plan', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          weightUnit: unit,
+          goal: calcResult.goal || guessGoal(calcResult),
+          target_cal: calcResult.calories,
+          protein_g: calcResult.protein_g,
+          carbs_g: calcResult.carbs_g,
+          fat_g: calcResult.fat_g,
+          maintenance: calcResult.maintenance,
+          sex: calcResult.sex,
+        }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'Could not start tracking.')
+      setPlan(data.plan)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function addWeighIn() {
+    const weight = parseFloat(w)
+    if (!weight || weight <= 0) return setError('Enter your weight.')
+    setError('')
+    setBusy(true)
+    try {
+      const r = await fetch('/api/weighin', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          weight,
+          unit,
+          calories: cals ? parseFloat(cals) : undefined,
+        }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'Could not save weigh-in.')
+      setWeighIns(data.weighIns || [])
+      if (data.plan) setPlan(data.plan)
+      setRecal(data.recalibration || null)
+      setW('')
+      setCals('')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!loaded) {
+    return (
+      <section className="card tracker" aria-busy="true">
+        <p className="card-label">Track progress</p>
+        <div className="shimmer w40" style={{ height: 14 }} />
+      </section>
+    )
+  }
+
+  // no plan saved yet
+  if (!plan) {
+    return (
+      <section className="card tracker">
+        <p className="card-label">Track progress</p>
+        {calcResult ? (
+          <>
+            <p className="tracker-intro">
+              Save this plan, then log your weight each week. Once there's a week of data, it
+              measures your <b>real</b> maintenance from how your weight actually moved — and adjusts
+              your target automatically. That's the difference between a calculator and a coach.
+            </p>
+            <button className="cta" onClick={startTracking}>Start tracking this plan</button>
+          </>
+        ) : (
+          <p className="tracker-intro">Calculate a plan above, then come back here to track it week to week.</p>
+        )}
+        {error && <p className="form-error">{error}</p>}
+      </section>
+    )
+  }
+
+  // active tracker
+  return (
+    <section className="card tracker">
+      <p className="card-label">Track progress</p>
+
+      <div className="tracker-current">
+        <div>
+          <span className="tc-label">Current target</span>
+          <span className="tc-num">{plan.target_cal.toLocaleString()} <small>kcal</small></span>
+        </div>
+        <div className="tc-macros">
+          <span className="tc-chip p">{plan.protein_g}P</span>
+          <span className="tc-chip c">{plan.carbs_g}C</span>
+          <span className="tc-chip f">{plan.fat_g}F</span>
+        </div>
+      </div>
+
+      <WeightChart weighIns={weighIns} unit={unit} />
+
+      {recal && (
+        <div className={recal.applied ? 'recal-note applied' : 'recal-note pending'}>
+          {recal.applied ? '↻ ' : 'ⓘ '}{recal.message || recal.reason}
+        </div>
+      )}
+
+      <div className="weighin-form">
+        <div className="wf-row">
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder={`Weight (${unit})`}
+            value={w}
+            onChange={(e) => setW(e.target.value)}
+            aria-label="Weight today"
+          />
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder="Avg kcal (optional)"
+            value={cals}
+            onChange={(e) => setCals(e.target.value)}
+            aria-label="Average calories since last weigh-in"
+          />
+        </div>
+        <button className="cta secondary" onClick={addWeighIn} disabled={busy}>
+          {busy ? 'Saving…' : 'Log weigh-in'}
+        </button>
+        <p className="wf-hint">
+          Calories optional — leave blank and it assumes you hit your target. Log roughly weekly for
+          the cleanest signal.
+        </p>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+    </section>
+  )
+}
+
+// pick a goal label if the calc result didn't carry one
+function guessGoal(r) {
+  if (!r || r.delta == null) return 'maintain'
+  if (r.delta < -50) return 'lose'
+  if (r.delta > 50) return 'gain'
+  return 'maintain'
+}
+
+// ---- compact dependency-free SVG trend line ----
+function WeightChart({ weighIns, unit }) {
+  if (!weighIns || weighIns.length === 0) {
+    return <p className="chart-empty">No weigh-ins yet — log your first below.</p>
+  }
+
+  const toDisplay = (lbs) => (unit === 'kg' ? lbs / LB_PER_KG : lbs)
+  const pts = weighIns.map((x) => ({ t: new Date(x.logged_on).getTime(), v: toDisplay(x.weight_lbs) }))
+
+  const W = 320, H = 120, P = 14
+  const vals = pts.map((p) => p.v)
+  const times = pts.map((p) => p.t)
+  const minV = Math.min(...vals), maxV = Math.max(...vals)
+  const minT = Math.min(...times), maxT = Math.max(...times)
+  const spanV = maxV - minV || 1
+  const spanT = maxT - minT || 1
+
+  const x = (t) => P + ((t - minT) / spanT) * (W - 2 * P)
+  const y = (v) => P + (1 - (v - minV) / spanV) * (H - 2 * P)
+
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')
+  const latest = pts[pts.length - 1].v
+  const first = pts[0].v
+  const change = latest - first
+
+  return (
+    <div className="chart-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Weight trend">
+        <path d={path} fill="none" stroke="var(--fat)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {pts.map((p, i) => (
+          <circle key={i} cx={x(p.t)} cy={y(p.v)} r={i === pts.length - 1 ? 4 : 2.5}
+            fill={i === pts.length - 1 ? 'var(--fat)' : 'var(--surface)'} stroke="var(--fat)" strokeWidth="1.5" />
+        ))}
+      </svg>
+      <div className="chart-meta">
+        <span><b>{latest.toFixed(1)}</b> {unit} now</span>
+        <span className={change <= 0 ? 'down' : 'up'}>
+          {change === 0 ? '±0' : `${change < 0 ? '−' : '+'}${Math.abs(change).toFixed(1)}`} {unit} since start
+        </span>
+      </div>
+    </div>
+  )
+}
