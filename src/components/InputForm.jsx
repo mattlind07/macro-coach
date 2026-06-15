@@ -50,7 +50,7 @@ export default function InputForm({ onSubmit, loading }) {
             id="weight"
             type="number"
             inputMode="decimal"
-            placeholder={unit === 'lb' ? '175' : '79'}
+            placeholder={unit === 'lb' ? '200' : '90'}
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
           />
@@ -70,7 +70,7 @@ export default function InputForm({ onSubmit, loading }) {
           id="cals"
           type="number"
           inputMode="numeric"
-          placeholder="2400"
+          placeholder="3000"
           value={currentCalories}
           onChange={(e) => setCurrentCalories(e.target.value)}
         />
