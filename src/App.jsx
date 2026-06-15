@@ -14,6 +14,8 @@ export default function App() {
     const a = getAuth()
     return a ? { userId: a.userId, email: a.email } : null
   })
+  const [lastPayload, setLastPayload] = useState(null)
+  const [savedInputs, setSavedInputs] = useState(null)
 
   function handleAuth(user) {
     setAuthUser(user)
@@ -24,7 +26,21 @@ export default function App() {
     setAuthUser(null)
   }
 
+  function handlePlanLoaded(plan) {
+    if (!plan) return
+    setSavedInputs({
+      weight: plan.weight != null ? String(plan.weight) : '',
+      unit: plan.weight_unit || 'lb',
+      currentCalories: plan.current_calories != null ? String(plan.current_calories) : '',
+      goal: plan.goal || 'lose',
+      sex: plan.sex || 'unspecified',
+      age: plan.age != null ? String(plan.age) : '',
+      activity: plan.activity || '',
+    })
+  }
+
   async function handleSubmit(payload) {
+    setLastPayload(payload)
     setStatus('loading')
     setErrorMsg('')
     try {
@@ -75,19 +91,19 @@ export default function App() {
       </h1>
       <p className="hero-sub">
         Tell it what you weigh, what you normally eat in a day, and where you want your weight to
-        go. It sets a calorie target and splits it into protein, carbs, and fat — protein first.
+        go. It sets a calorie target and splits it into protein, carbs, and fat - protein first.
       </p>
 
       <div className="grid">
-        <InputForm onSubmit={handleSubmit} loading={status === 'loading'} />
+        <InputForm onSubmit={handleSubmit} loading={status === 'loading'} savedInputs={savedInputs} />
         <Results status={status} result={result} errorMsg={errorMsg} />
       </div>
 
-      <Tracker key={authUser?.userId || 'guest'} calcResult={status === 'done' ? result : null} />
+      <Tracker key={authUser?.userId || 'guest'} calcResult={status === 'done' ? result : null} calcPayload={lastPayload} onPlanLoaded={handlePlanLoaded} />
 
       <p className="foot">
         Estimates for general guidance, not medical advice. Recalculate every few weeks as your
-        weight changes — your maintenance moves with it.
+        weight changes. Your maintenance moves with it.
       </p>
 
       {showAuth && (

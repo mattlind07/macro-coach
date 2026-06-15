@@ -3,7 +3,7 @@ import { getUserId } from '../lib/user.js'
 
 const LB_PER_KG = 2.20462
 
-export default function Tracker({ calcResult }) {
+export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
   const userId = useMemo(() => getUserId(), [])
   const [plan, setPlan] = useState(null)
   const [weighIns, setWeighIns] = useState([])
@@ -31,6 +31,7 @@ export default function Tracker({ calcResult }) {
         if (!r.ok) throw new Error(data.error || 'Could not load your tracker.')
         if (data.plan) {
           setPlan(data.plan)
+          onPlanLoaded?.(data.plan)
         }
         setWeighIns(data.weighIns || [])
       } catch (e) {
@@ -58,6 +59,10 @@ export default function Tracker({ calcResult }) {
           fat_g: calcResult.fat_g,
           maintenance: calcResult.maintenance,
           sex: calcResult.sex,
+          age: calcPayload?.age,
+          activity: calcPayload?.activity,
+          weight: calcPayload?.weight,
+          current_calories: calcPayload?.currentCalories,
         }),
       })
       const data = await r.json()

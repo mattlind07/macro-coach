@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const GOALS = [
   { key: 'lose', title: 'Lose', sub: 'fat loss' },
@@ -6,18 +6,28 @@ const GOALS = [
   { key: 'gain', title: 'Gain', sub: 'build muscle' },
 ]
 
-export default function InputForm({ onSubmit, loading }) {
+export default function InputForm({ onSubmit, loading, savedInputs }) {
   const [weight, setWeight] = useState('')
   const [unit, setUnit] = useState('lb')
   const [currentCalories, setCurrentCalories] = useState('')
   const [goal, setGoal] = useState('lose')
 
-  // optional — refine the AI's reasoning
   const [sex, setSex] = useState('unspecified')
   const [age, setAge] = useState('')
   const [activity, setActivity] = useState('')
 
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!savedInputs) return
+    if (savedInputs.weight) setWeight(savedInputs.weight)
+    if (savedInputs.unit) setUnit(savedInputs.unit)
+    if (savedInputs.currentCalories) setCurrentCalories(savedInputs.currentCalories)
+    if (savedInputs.goal) setGoal(savedInputs.goal)
+    if (savedInputs.sex) setSex(savedInputs.sex)
+    if (savedInputs.age) setAge(savedInputs.age)
+    if (savedInputs.activity !== undefined) setActivity(savedInputs.activity)
+  }, [savedInputs])
 
   function submit() {
     const w = parseFloat(weight)
@@ -95,42 +105,37 @@ export default function InputForm({ onSubmit, loading }) {
         </div>
       </div>
 
-      {/* optional refinements */}
-      <details className="advanced">
-        <summary>Optional — sharpen the estimate</summary>
+      <div className="field">
+        <label htmlFor="sex">Sex</label>
+        <select id="sex" value={sex} onChange={(e) => setSex(e.target.value)}>
+          <option value="unspecified">Prefer not to say</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
 
-        <div className="field">
-          <label htmlFor="sex">Sex</label>
-          <select id="sex" value={sex} onChange={(e) => setSex(e.target.value)}>
-            <option value="unspecified">Prefer not to say</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </div>
+      <div className="field">
+        <label htmlFor="age">Age</label>
+        <input
+          id="age"
+          type="number"
+          inputMode="numeric"
+          placeholder="21"
+          value={age}
+          onChange={(e) => setAge(e.target.value)}
+        />
+      </div>
 
-        <div className="field">
-          <label htmlFor="age">Age</label>
-          <input
-            id="age"
-            type="number"
-            inputMode="numeric"
-            placeholder="21"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="activity">Activity level</label>
-          <select id="activity" value={activity} onChange={(e) => setActivity(e.target.value)}>
-            <option value="">Unspecified</option>
-            <option value="sedentary">Sedentary (desk, little exercise)</option>
-            <option value="light">Light (1–3 days/week)</option>
-            <option value="moderate">Moderate (3–5 days/week)</option>
-            <option value="very active">Very active (6–7 days/week)</option>
-          </select>
-        </div>
-      </details>
+      <div className="field">
+        <label htmlFor="activity">Activity level</label>
+        <select id="activity" value={activity} onChange={(e) => setActivity(e.target.value)}>
+          <option value="">Unspecified</option>
+          <option value="sedentary">Sedentary (desk, little exercise)</option>
+          <option value="light">Light (1–3 days/week)</option>
+          <option value="moderate">Moderate (3–5 days/week)</option>
+          <option value="very active">Very active (6–7 days/week)</option>
+        </select>
+      </div>
 
       <button className="cta" onClick={submit} disabled={loading}>
         {loading ? 'Crunching…' : 'Calculate my macros'}

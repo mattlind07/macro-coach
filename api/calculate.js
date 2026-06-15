@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   }
 
   // --- deterministic baseline (also the fallback) ---------------
-  const baseline = computeMacros({ weight, unit, currentCalories, goal, sex })
+  const baseline = computeMacros({ weight, unit, currentCalories, goal, sex, age, activity })
 
   // --- no key? return the deterministic answer ------------------
   if (!process.env.GEMINI_API_KEY) {

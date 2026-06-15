@@ -138,7 +138,7 @@ export default function Results({ status, result, errorMsg }) {
 
       <div className={`source-tag ${result.source === 'fallback' ? 'fallback' : ''}`}>
         <span className="dot" />
-        {result.source === 'ai' ? 'Personalized by AI' : 'Formula estimate (add an API key for AI tuning)'}
+        {result.source === 'ai' ? 'Personalized by AI' : 'Formula estimate'}
       </div>
     </section>
   )
