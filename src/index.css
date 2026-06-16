@@ -666,6 +666,9 @@ select:focus {
 .weighin-item:last-child { border-bottom: none; }
 .wi-date { color: var(--ink-soft); flex: 1; }
 .wi-weight { font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
+.wi-cals { font-family: var(--font-mono); font-size: 13px; color: var(--ink-soft); }
+.wi-cals.target { color: var(--ink-faint); font-style: italic; }
+.wi-cals-tag { font-size: 11px; }
 .wi-del {
   background: none;
   border: none;

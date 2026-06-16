@@ -177,7 +177,7 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
 
       <WeightChart weighIns={weighIns} unit={unit} />
 
-      <WeighInHistory weighIns={weighIns} unit={unit} onDelete={deleteWeighIn} />
+      <WeighInHistory weighIns={weighIns} unit={unit} plan={plan} onDelete={deleteWeighIn} />
 
       {recal && (
         <div className={recal.applied ? 'recal-note applied' : 'recal-note pending'}>
@@ -232,7 +232,7 @@ function guessGoal(r) {
 }
 
 // ---- weigh-in history list with delete ----
-function WeighInHistory({ weighIns, unit, onDelete }) {
+function WeighInHistory({ weighIns, unit, plan, onDelete }) {
   if (!weighIns || weighIns.length === 0) return null
 
   const toDisplay = (lbs) => (unit === 'kg' ? lbs / LB_PER_KG : lbs)
@@ -245,21 +245,31 @@ function WeighInHistory({ weighIns, unit, onDelete }) {
 
   return (
     <ul className="weighin-list">
-      {[...weighIns].reverse().map((wi) => (
-        <li key={wi.id} className="weighin-item">
-          <span className="wi-date">{fmt(wi.logged_on)}</span>
-          <span className="wi-weight">{toDisplay(wi.weight_lbs).toFixed(1)} {unit}</span>
-          <button
-            className="wi-del"
-            onClick={() => onDelete(wi.id)}
-            aria-label={`Delete weigh-in for ${fmt(wi.logged_on)}`}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M12 3.5l-.7 7.7a1 1 0 0 1-1 .8H3.7a1 1 0 0 1-1-.8L2 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </li>
-      ))}
+      {[...weighIns].reverse().map((wi) => {
+        // fall back to the plan's target when the day's calories weren't logged
+        const loggedCals = wi.calories
+        const cals = loggedCals ?? plan?.target_cal
+        return (
+          <li key={wi.id} className="weighin-item">
+            <span className="wi-date">{fmt(wi.logged_on)}</span>
+            <span className="wi-weight">{toDisplay(wi.weight_lbs).toFixed(1)} {unit}</span>
+            {cals != null && (
+              <span className={loggedCals != null ? 'wi-cals' : 'wi-cals target'}>
+                {Math.round(cals).toLocaleString()} kcal{loggedCals == null && <span className="wi-cals-tag"> (target)</span>}
+              </span>
+            )}
+            <button
+              className="wi-del"
+              onClick={() => onDelete(wi.id)}
+              aria-label={`Delete weigh-in for ${fmt(wi.logged_on)}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M12 3.5l-.7 7.7a1 1 0 0 1-1 .8H3.7a1 1 0 0 1-1-.8L2 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </li>
+        )
+      })}
     </ul>
   )
 }
