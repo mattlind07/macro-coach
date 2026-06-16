@@ -28,7 +28,7 @@ are clamped to a safe floor (1500 kcal male / 1200 female) with a warning.
 ## Progress tracker & auto-recalibration (the coach part)
 
 After calculating a plan, you can **start tracking** it and log your weight
-(optionally your average calories) week to week. Once there's at least a week of
+(optionally your average calories) week to week. Once there's at least two days of
 data, the backend stops *assuming* your maintenance and starts *measuring* it from
 how your weight actually moved:
 
@@ -39,6 +39,3 @@ TDEE ≈ avgIntake − (weightChangeLbs × 3500 / days)
 It then re-runs the goal math off that measured number and updates your target and
 macros. Each update is damped to ±250 kcal so a single water-weight blip can't
 swing your plan around. This is in `lib/db.js` (`recalibrate`).
-
-No login: each browser gets a random anonymous id (localStorage) that keys its data
-in Postgres.
