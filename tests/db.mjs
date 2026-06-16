@@ -13,12 +13,16 @@ function check(name, cond, detail = '') {
 
 // --- wire a Postgres-compatible tagged-template `sql` over PGlite ---
 const pg = new PGlite()
-const sql = async (strings, ...values) => {
+const taggedQuery = (runner) => async (strings, ...values) => {
   let text = strings[0]
   for (let i = 0; i < values.length; i++) text += '$' + (i + 1) + strings[i + 1]
-  const res = await pg.query(text, values)
+  const res = await runner(text, values)
   return res.rows
 }
+const sql = taggedQuery((text, values) => pg.query(text, values))
+// postgres.js exposes sql.begin(async tx => {...}); mirror it here using PGlite's
+// real transaction support so a thrown error actually rolls back, same as prod.
+sql.begin = (callback) => pg.transaction((tx) => callback(taggedQuery((text, values) => tx.query(text, values))))
 __setSqlForTest(sql)
 
 function mockRes() {

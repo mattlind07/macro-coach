@@ -17,32 +17,37 @@ export default async function handler(req, res) {
       const { userId, id } = body
       if (!userId || !id) return res.status(400).json({ error: 'userId and id required' })
 
-      await sql`DELETE FROM weigh_ins WHERE id = ${id} AND user_id = ${userId}`
+      // Transaction: if recalibrate() throws partway through, the delete and
+      // any plan update roll back together instead of leaving a half-applied state.
+      const result = await sql.begin(async (tx) => {
+        await tx`DELETE FROM weigh_ins WHERE id = ${id} AND user_id = ${userId}`
 
-      const plans = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
-      const plan = plans[0]
-      const weighIns = await sql`
-        SELECT id, logged_on, weight_lbs, calories
-        FROM weigh_ins WHERE user_id = ${userId}
-        ORDER BY logged_on ASC`
+        const plans = await tx`SELECT * FROM plans WHERE user_id = ${userId}`
+        const plan = plans[0]
+        const weighIns = await tx`
+          SELECT id, logged_on, weight_lbs, calories
+          FROM weigh_ins WHERE user_id = ${userId}
+          ORDER BY logged_on ASC`
 
-      if (!plan) return res.status(200).json({ plan: null, weighIns, recalibration: null })
+        if (!plan) return { plan: null, weighIns, recalibration: null }
 
-      const recal = recalibrate(plan, weighIns)
-      if (recal.applied) {
-        await sql`
-          UPDATE plans SET
-            target_cal  = ${recal.newPlan.target_cal},
-            protein_g   = ${recal.newPlan.protein_g},
-            carbs_g     = ${recal.newPlan.carbs_g},
-            fat_g       = ${recal.newPlan.fat_g},
-            maintenance = ${recal.newPlan.maintenance},
-            updated_at  = now()
-          WHERE user_id = ${userId}`
-      }
+        const recal = recalibrate(plan, weighIns)
+        if (recal.applied) {
+          await tx`
+            UPDATE plans SET
+              target_cal  = ${recal.newPlan.target_cal},
+              protein_g   = ${recal.newPlan.protein_g},
+              carbs_g     = ${recal.newPlan.carbs_g},
+              fat_g       = ${recal.newPlan.fat_g},
+              maintenance = ${recal.newPlan.maintenance},
+              updated_at  = now()
+            WHERE user_id = ${userId}`
+        }
 
-      const updated = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
-      return res.status(200).json({ plan: updated[0], weighIns, recalibration: recal })
+        const updated = await tx`SELECT * FROM plans WHERE user_id = ${userId}`
+        return { plan: updated[0], weighIns, recalibration: recal }
+      })
+      return res.status(200).json(result)
     }
 
     const { userId, weight, unit = 'lb', calories, date } = body
@@ -54,41 +59,45 @@ export default async function handler(req, res) {
     const loggedOn = date || new Date().toISOString().slice(0, 10) // YYYY-MM-DD
     const cals = typeof calories === 'number' && calories > 0 ? Math.round(calories) : null
 
-    // insert the weigh-in
-    await sql`
-      INSERT INTO weigh_ins (user_id, logged_on, weight_lbs, calories)
-      VALUES (${userId}, ${loggedOn}, ${weightLbs}, ${cals})`
+    // Transaction: if recalibrate() throws partway through, the insert and any
+    // plan update roll back together — a failed request leaves no trace, so a
+    // client retry can't create a duplicate weigh-in.
+    const result = await sql.begin(async (tx) => {
+      await tx`
+        INSERT INTO weigh_ins (user_id, logged_on, weight_lbs, calories)
+        VALUES (${userId}, ${loggedOn}, ${weightLbs}, ${cals})`
 
-    // pull plan + full history
-    const plans = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
-    const plan = plans[0]
-    const weighIns = await sql`
-      SELECT id, logged_on, weight_lbs, calories
-      FROM weigh_ins WHERE user_id = ${userId}
-      ORDER BY logged_on ASC`
+      const plans = await tx`SELECT * FROM plans WHERE user_id = ${userId}`
+      const plan = plans[0]
+      const weighIns = await tx`
+        SELECT id, logged_on, weight_lbs, calories
+        FROM weigh_ins WHERE user_id = ${userId}
+        ORDER BY logged_on ASC`
 
-    if (!plan) {
-      // weigh-ins without a saved plan — just return history
-      return res.status(200).json({ plan: null, weighIns, recalibration: null })
-    }
+      if (!plan) {
+        // weigh-ins without a saved plan — just return history
+        return { plan: null, weighIns, recalibration: null }
+      }
 
-    // recalibrate from observed data
-    const recal = recalibrate(plan, weighIns)
+      // recalibrate from observed data
+      const recal = recalibrate(plan, weighIns)
 
-    if (recal.applied) {
-      await sql`
-        UPDATE plans SET
-          target_cal  = ${recal.newPlan.target_cal},
-          protein_g   = ${recal.newPlan.protein_g},
-          carbs_g     = ${recal.newPlan.carbs_g},
-          fat_g       = ${recal.newPlan.fat_g},
-          maintenance = ${recal.newPlan.maintenance},
-          updated_at  = now()
-        WHERE user_id = ${userId}`
-    }
+      if (recal.applied) {
+        await tx`
+          UPDATE plans SET
+            target_cal  = ${recal.newPlan.target_cal},
+            protein_g   = ${recal.newPlan.protein_g},
+            carbs_g     = ${recal.newPlan.carbs_g},
+            fat_g       = ${recal.newPlan.fat_g},
+            maintenance = ${recal.newPlan.maintenance},
+            updated_at  = now()
+          WHERE user_id = ${userId}`
+      }
 
-    const updated = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
-    return res.status(200).json({ plan: updated[0], weighIns, recalibration: recal })
+      const updated = await tx`SELECT * FROM plans WHERE user_id = ${userId}`
+      return { plan: updated[0], weighIns, recalibration: recal }
+    })
+    return res.status(200).json(result)
   } catch (err) {
     console.error('/api/weighin error:', err?.message)
     return res.status(500).json({ error: 'Database error. Is the Postgres integration connected?' })
