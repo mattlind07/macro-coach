@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getUserId } from '../lib/user.js'
+import { getUserId, getAuthToken } from '../lib/user.js'
 
 const LB_PER_KG = 2.20462
+
+// Logged-in requests carry the bearer token so the server can verify the
+// caller actually owns userId; guests (no token) are sent as before.
+function authHeaders() {
+  const token = getAuthToken()
+  return token ? { authorization: `Bearer ${token}` } : {}
+}
 
 export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
   const userId = useMemo(() => getUserId(), [])
@@ -26,7 +33,7 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
     if (!userId) return
     ;(async () => {
       try {
-        const r = await fetch(`/api/plan?userId=${encodeURIComponent(userId)}`)
+        const r = await fetch(`/api/plan?userId=${encodeURIComponent(userId)}`, { headers: authHeaders() })
         const data = await r.json()
         if (!r.ok) throw new Error(data.error || 'Could not load your tracker.')
         if (data.plan) {
@@ -48,7 +55,7 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
     try {
       const r = await fetch('/api/plan', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           userId,
           weightUnit: unit,
@@ -77,7 +84,7 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
     try {
       const r = await fetch('/api/weighin', {
         method: 'DELETE',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ userId, id }),
       })
       const data = await r.json()
@@ -98,7 +105,7 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
     try {
       const r = await fetch('/api/weighin', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           userId,
           weight,

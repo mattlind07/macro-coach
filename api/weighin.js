@@ -3,6 +3,7 @@
 // enough data, updates the stored plan. Returns the full updated state.
 import { db, ensureSchema, recalibrate } from '../lib/db.js'
 import { toLbs } from '../lib/macros.js'
+import { getAuthedUserId } from '../lib/auth.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'DELETE') return res.status(405).json({ error: 'Use POST or DELETE.' })
@@ -11,11 +12,15 @@ export default async function handler(req, res) {
     await ensureSchema()
     const sql = db()
 
+    const auth = getAuthedUserId(req)
+    if (!auth.valid) return res.status(401).json({ error: 'Invalid or expired session.' })
+
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}
 
     if (req.method === 'DELETE') {
       const { userId, id } = body
       if (!userId || !id) return res.status(400).json({ error: 'userId and id required' })
+      if (auth.userId && auth.userId !== userId) return res.status(403).json({ error: 'Not authorized for this user.' })
 
       // Transaction: if recalibrate() throws partway through, the delete and
       // any plan update roll back together instead of leaving a half-applied state.
@@ -53,6 +58,7 @@ export default async function handler(req, res) {
     const { userId, weight, unit = 'lb', calories, date } = body
 
     if (!userId) return res.status(400).json({ error: 'userId required' })
+    if (auth.userId && auth.userId !== userId) return res.status(403).json({ error: 'Not authorized for this user.' })
     if (typeof weight !== 'number' || weight <= 0) return res.status(400).json({ error: 'valid weight required' })
 
     const weightLbs = toLbs(weight, unit)

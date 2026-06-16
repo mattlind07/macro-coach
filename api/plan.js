@@ -1,15 +1,20 @@
 // /api/plan — GET ?userId=  -> { plan, weighIns }
 //            POST { userId, ...planFields } -> upsert the plan
 import { db, ensureSchema } from '../lib/db.js'
+import { getAuthedUserId } from '../lib/auth.js'
 
 export default async function handler(req, res) {
   try {
     await ensureSchema()
     const sql = db()
 
+    const auth = getAuthedUserId(req)
+    if (!auth.valid) return res.status(401).json({ error: 'Invalid or expired session.' })
+
     if (req.method === 'GET') {
       const userId = req.query.userId
       if (!userId) return res.status(400).json({ error: 'userId required' })
+      if (auth.userId && auth.userId !== userId) return res.status(403).json({ error: 'Not authorized for this user.' })
 
       const plans = await sql`SELECT * FROM plans WHERE user_id = ${userId}`
       const weighIns = await sql`
@@ -23,6 +28,7 @@ export default async function handler(req, res) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}
       const { userId, weightUnit = 'lb', goal, target_cal, protein_g, carbs_g, fat_g, maintenance, sex, age, activity, weight, current_calories } = body
       if (!userId || !goal || target_cal == null) return res.status(400).json({ error: 'missing fields' })
+      if (auth.userId && auth.userId !== userId) return res.status(403).json({ error: 'Not authorized for this user.' })
 
       // upsert — one plan per user
       await sql`

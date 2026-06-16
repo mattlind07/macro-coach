@@ -22,6 +22,11 @@ export function setAuth(auth) {
   } catch {}
 }
 
+// Bearer token for the logged-in user, or null for a guest.
+export function getAuthToken() {
+  return getAuth()?.token || null
+}
+
 export function getUserId() {
   if (typeof window === 'undefined') return null
 
