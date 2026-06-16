@@ -1,6 +1,6 @@
 // /api/plan — GET ?userId=  -> { plan, weighIns }
 //            POST { userId, ...planFields } -> upsert the plan
-import { db, ensureSchema } from '../lib/db.js'
+import { db, ensureSchema, attachTrend } from '../lib/db.js'
 import { getAuthedUserId } from '../lib/auth.js'
 
 export default async function handler(req, res) {
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         SELECT id, logged_on, weight_lbs, calories
         FROM weigh_ins WHERE user_id = ${userId}
         ORDER BY logged_on ASC`
-      return res.status(200).json({ plan: plans[0] || null, weighIns })
+      return res.status(200).json({ plan: plans[0] || null, weighIns: attachTrend(weighIns) })
     }
 
     if (req.method === 'POST') {

@@ -1,7 +1,7 @@
 // /api/weighin — POST { userId, weight, unit, calories?, date? }
 // Inserts the weigh-in, recomputes maintenance from history, and if there's
 // enough data, updates the stored plan. Returns the full updated state.
-import { db, ensureSchema, recalibrate } from '../lib/db.js'
+import { db, ensureSchema, recalibrate, attachTrend } from '../lib/db.js'
 import { toLbs } from '../lib/macros.js'
 import { getAuthedUserId } from '../lib/auth.js'
 
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
           FROM weigh_ins WHERE user_id = ${userId}
           ORDER BY logged_on ASC`
 
-        if (!plan) return { plan: null, weighIns, recalibration: null }
+        if (!plan) return { plan: null, weighIns: attachTrend(weighIns), recalibration: null }
 
         const recal = recalibrate(plan, weighIns)
         if (recal.applied) {
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
         }
 
         const updated = await tx`SELECT * FROM plans WHERE user_id = ${userId}`
-        return { plan: updated[0], weighIns, recalibration: recal }
+        return { plan: updated[0], weighIns: attachTrend(weighIns), recalibration: recal }
       })
       return res.status(200).json(result)
     }
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
 
       if (!plan) {
         // weigh-ins without a saved plan — just return history
-        return { plan: null, weighIns, recalibration: null }
+        return { plan: null, weighIns: attachTrend(weighIns), recalibration: null }
       }
 
       // recalibrate from observed data
@@ -101,7 +101,7 @@ export default async function handler(req, res) {
       }
 
       const updated = await tx`SELECT * FROM plans WHERE user_id = ${userId}`
-      return { plan: updated[0], weighIns, recalibration: recal }
+      return { plan: updated[0], weighIns: attachTrend(weighIns), recalibration: recal }
     })
     return res.status(200).json(result)
   } catch (err) {

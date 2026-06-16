@@ -213,8 +213,8 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
           {busy ? 'Saving…' : 'Log weigh-in'}
         </button>
         <p className="wf-hint">
-          Calories optional. Leave blank and it assumes you hit your target. Log roughly weekly for
-          the cleanest signal.
+          Calories optional. Leave blank and it assumes you hit your target. Log daily for the
+          cleanest trend — it averages your last 7 days to smooth out normal day-to-day swings.
         </p>
       </div>
 
@@ -281,27 +281,50 @@ function WeightChart({ weighIns, unit }) {
   }
 
   const toDisplay = (lbs) => (unit === 'kg' ? lbs / LB_PER_KG : lbs)
-  const pts = weighIns.map((x) => ({ t: new Date(x.logged_on).getTime(), v: toDisplay(x.weight_lbs) }))
+  // Plot the smoothed trend (7-day rolling average) instead of the raw
+  // weight, so the line matches what recalibration actually used. Raw
+  // values are still visible in the history list below.
+  const pts = weighIns.map((x) => ({ t: new Date(x.logged_on).getTime(), v: toDisplay(x.trend ?? x.weight_lbs) }))
 
-  const W = 320, H = 120, P = 14
+  const W = 320, H = 120, PAD_R = 14, PAD_Y = 16, PAD_L = 38
   const vals = pts.map((p) => p.v)
   const times = pts.map((p) => p.t)
-  const minV = Math.min(...vals), maxV = Math.max(...vals)
+  const rawMinV = Math.min(...vals), rawMaxV = Math.max(...vals)
   const minT = Math.min(...times), maxT = Math.max(...times)
-  const spanV = maxV - minV || 1
+
+  // Floor the y-axis range so a fraction-of-a-pound trend wobble doesn't fill
+  // the whole chart height and read as a dramatic swing. Real moves bigger
+  // than the floor still get their true range.
+  const MIN_SPAN = unit === 'kg' ? 2 : 4
+  const mid = (rawMaxV + rawMinV) / 2
+  const span = Math.max(rawMaxV - rawMinV, MIN_SPAN)
+  const minV = mid - span / 2
+  const maxV = mid + span / 2
   const spanT = maxT - minT || 1
 
-  const x = (t) => P + ((t - minT) / spanT) * (W - 2 * P)
-  const y = (v) => P + (1 - (v - minV) / spanV) * (H - 2 * P)
+  const x = (t) => PAD_L + ((t - minT) / spanT) * (W - PAD_L - PAD_R)
+  const y = (v) => PAD_Y + (1 - (v - minV) / span) * (H - 2 * PAD_Y)
 
   const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')
   const latest = pts[pts.length - 1].v
   const first = pts[0].v
   const change = latest - first
 
+  // Reference gridlines so the y-axis has a sense of scale instead of an
+  // unlabeled auto-fit line — top/middle/bottom of the padded range.
+  const ticks = [maxV, mid, minV]
+
   return (
     <div className="chart-wrap">
       <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Weight trend">
+        {ticks.map((t, i) => (
+          <g key={i}>
+            <line x1={PAD_L} x2={W - PAD_R} y1={y(t)} y2={y(t)} className="chart-grid" />
+            <text x={PAD_L - 6} y={y(t)} className="chart-tick" textAnchor="end" dominantBaseline="middle">
+              {t.toFixed(1)}
+            </text>
+          </g>
+        ))}
         <path d={path} fill="none" stroke="var(--fat)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         {pts.map((p, i) => (
           <circle key={i} cx={x(p.t)} cy={y(p.v)} r={i === pts.length - 1 ? 4 : 2.5}

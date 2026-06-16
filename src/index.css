@@ -620,6 +620,8 @@ select:focus {
 .chart-meta .down { color: #1f9d6b; }
 .chart-meta .up { color: var(--protein); }
 .chart-empty { font-size: 13px; color: var(--ink-faint); margin: 0 0 16px; }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-tick { font-family: var(--font-mono); font-size: 8px; fill: var(--ink-faint); }
 
 /* recalibration callout */
 .recal-note {
