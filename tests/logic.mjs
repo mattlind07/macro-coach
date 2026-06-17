@@ -41,13 +41,13 @@ check('floor produced a warning', fl.warnings.some((w) => /pulled up/i.test(w)))
 
 console.log('\n— recalibrate: guards —')
 const plan = { goal: 'lose', target_cal: 1800, maintenance: 2200, sex: 'male', weight_unit: 'lb' }
-check('needs 2+ weigh-ins', recalibrate(plan, [{ logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 }]).applied === false)
-check('3-day span now applies with earlyData flag', (() => {
+check('single entry → not applied', recalibrate(plan, [{ logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 }]).applied === false)
+check('2 entries / 3-day span → not applied (need 7)', (() => {
   const r = recalibrate(plan, [
     { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
     { logged_on: '2026-06-04', weight_lbs: 184, calories: 1800 },
   ])
-  return r.applied === true && r.earlyData === true
+  return r.applied === false
 })())
 
 check('same-day entries still blocked', recalibrate(plan, [
@@ -55,26 +55,26 @@ check('same-day entries still blocked', recalibrate(plan, [
   { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
 ]).applied === false)
 
+// Helper: 7 entries every 2 days (Jun 1, 3, 5, 7, 9, 11, 13 = 12-day window)
+const sevenEntries = (weights, cals = 1800) =>
+  ['2026-06-01','2026-06-03','2026-06-05','2026-06-07','2026-06-09','2026-06-11','2026-06-13']
+    .map((date, i) => ({ logged_on: date, weight_lbs: weights[i], calories: cals }))
+
 console.log('\n— recalibrate: measures maintenance + damps —')
-const slow = recalibrate(plan, [
-  { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
-  { logged_on: '2026-06-15', weight_lbs: 184.5, calories: 1800 },
-])
+// Slow loss: trend moves ~-0.2 lb over 12 days → raw TDEE 1858 → capped at 2200-250=1950
+const slow = recalibrate(plan, sevenEntries([185.0, 185.0, 184.9, 184.9, 184.8, 184.8, 184.7]))
 check('slow loss → maintenance revised DOWN from 2200', slow.estimatedTDEE < 2200, `est=${slow.estimatedTDEE}`)
 check('slow loss → damped by ≤250', slow.estimatedTDEE >= 2200 - 250)
-const fast = recalibrate(plan, [
-  { logged_on: '2026-06-01', weight_lbs: 185, calories: 1800 },
-  { logged_on: '2026-06-15', weight_lbs: 180, calories: 1800 },
-])
+// Fast loss: trend moves ~-2.25 lb over 12 days → raw TDEE 2456 → capped at 2200+250=2450
+const fast = recalibrate(plan, sevenEntries([185.0, 184.5, 184.0, 183.5, 183.0, 182.5, 182.0]))
 check('fast loss → maintenance revised UP', fast.estimatedTDEE > 2200, `est=${fast.estimatedTDEE}`)
 check('fast loss → damped to +250 cap', fast.estimatedTDEE <= 2200 + 250)
 
 console.log('\n— recalibrate: imputes target for unlogged entries —')
-const mixed = recalibrate(plan, [
-  { logged_on: '2026-06-01', weight_lbs: 185, calories: 2000 },
-  { logged_on: '2026-06-15', weight_lbs: 183, calories: null },
-])
-// avg of (2000, target 1800) = 1900
+// 7 entries Jun 1–8 (7-day span); first has 2500 kcal, rest null → avgIntake = (2500 + 6*1800)/7 = 1900
+const mixedEntries = ['2026-06-01','2026-06-02','2026-06-03','2026-06-04','2026-06-05','2026-06-06','2026-06-08']
+  .map((date, i) => ({ logged_on: date, weight_lbs: [185.0,185.0,184.9,184.9,184.8,184.8,184.7][i], calories: i === 0 ? 2500 : null }))
+const mixed = recalibrate(plan, mixedEntries)
 check('mixed week avgIntake imputes target (≈1900 in message)', /1900 kcal\/day/.test(mixed.message), mixed.message)
 
 console.log(`\nLOGIC: ${pass} passed, ${fail} failed\n`)
