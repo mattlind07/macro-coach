@@ -179,6 +179,12 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
 
       <WeighInHistory weighIns={weighIns} unit={unit} plan={plan} onDelete={deleteWeighIn} />
 
+      {calcResult && (
+        <button className="cta secondary update-plan-btn" onClick={startTracking}>
+          Update plan to new macros
+        </button>
+      )}
+
       {recal && (
         <div className={recal.applied ? 'recal-note applied' : 'recal-note pending'}>
           {recal.applied ? '↻ ' : 'ⓘ '}{recal.message || recal.reason}
