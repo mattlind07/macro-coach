@@ -182,11 +182,6 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
       {recal && (
         <div className={recal.applied ? 'recal-note applied' : 'recal-note pending'}>
           {recal.applied ? '↻ ' : 'ⓘ '}{recal.message || recal.reason}
-          {recal.applied && recal.earlyData && (
-            <p className="recal-early-note">
-              Best results come after 7+ consecutive days of data — early estimates may be skewed by water weight fluctuations.
-            </p>
-          )}
         </div>
       )}
 

@@ -40,12 +40,13 @@ export default async function handler(req, res) {
         if (recal.applied) {
           await tx`
             UPDATE plans SET
-              target_cal  = ${recal.newPlan.target_cal},
-              protein_g   = ${recal.newPlan.protein_g},
-              carbs_g     = ${recal.newPlan.carbs_g},
-              fat_g       = ${recal.newPlan.fat_g},
-              maintenance = ${recal.newPlan.maintenance},
-              updated_at  = now()
+              target_cal           = ${recal.newPlan.target_cal},
+              protein_g            = ${recal.newPlan.protein_g},
+              carbs_g              = ${recal.newPlan.carbs_g},
+              fat_g                = ${recal.newPlan.fat_g},
+              maintenance          = ${recal.newPlan.maintenance},
+              last_recalibrated_on = ${recal.newPlan.last_recalibrated_on},
+              updated_at           = now()
             WHERE user_id = ${userId}`
         }
 
@@ -91,12 +92,13 @@ export default async function handler(req, res) {
       if (recal.applied) {
         await tx`
           UPDATE plans SET
-            target_cal  = ${recal.newPlan.target_cal},
-            protein_g   = ${recal.newPlan.protein_g},
-            carbs_g     = ${recal.newPlan.carbs_g},
-            fat_g       = ${recal.newPlan.fat_g},
-            maintenance = ${recal.newPlan.maintenance},
-            updated_at  = now()
+            target_cal           = ${recal.newPlan.target_cal},
+            protein_g            = ${recal.newPlan.protein_g},
+            carbs_g              = ${recal.newPlan.carbs_g},
+            fat_g                = ${recal.newPlan.fat_g},
+            maintenance          = ${recal.newPlan.maintenance},
+            last_recalibrated_on = ${recal.newPlan.last_recalibrated_on},
+            updated_at           = now()
           WHERE user_id = ${userId}`
       }
 
