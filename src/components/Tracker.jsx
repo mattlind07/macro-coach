@@ -172,18 +172,17 @@ export default function Tracker({ calcResult, calcPayload, onPlanLoaded }) {
           <span className="tc-chip p">{plan.protein_g}P</span>
           <span className="tc-chip c">{plan.carbs_g}C</span>
           <span className="tc-chip f">{plan.fat_g}F</span>
+          {calcResult && (
+            <button className="update-plan-link" onClick={startTracking}>
+              ↑ Update plan
+            </button>
+          )}
         </div>
       </div>
 
       <WeightChart weighIns={weighIns} unit={unit} />
 
       <WeighInHistory weighIns={weighIns} unit={unit} plan={plan} onDelete={deleteWeighIn} />
-
-      {calcResult && (
-        <button className="cta secondary update-plan-btn" onClick={startTracking}>
-          Update plan to new macros
-        </button>
-      )}
 
       {recal && (
         <div className={recal.applied ? 'recal-note applied' : 'recal-note pending'}>
