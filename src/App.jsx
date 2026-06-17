@@ -9,7 +9,10 @@ export default function App() {
   const [status, setStatus] = useState('idle') // idle | loading | done | error
   const [result, setResult] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
-  const [showAuth, setShowAuth] = useState(false)
+  const [resetToken, setResetToken] = useState(() =>
+    new URLSearchParams(window.location.search).get('reset_token')
+  )
+  const [showAuth, setShowAuth] = useState(() => Boolean(resetToken))
   const [authUser, setAuthUser] = useState(() => {
     const a = getAuth()
     return a ? { userId: a.userId, email: a.email } : null
@@ -19,6 +22,26 @@ export default function App() {
 
   function handleAuth(user) {
     setAuthUser(user)
+  }
+
+  // Strips ?reset_token= from the URL so a page refresh can't re-trigger
+  // reset mode with a token that's already been consumed (or shown once).
+  function clearResetToken() {
+    if (!resetToken) return
+    setResetToken(null)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('reset_token')
+    window.history.replaceState({}, '', url)
+  }
+
+  function handleCloseAuth() {
+    clearResetToken()
+    setShowAuth(false)
+  }
+
+  function handleAuthSuccess(user) {
+    clearResetToken()
+    handleAuth(user)
   }
 
   function handleLogout() {
@@ -107,7 +130,7 @@ export default function App() {
       </p>
 
       {showAuth && (
-        <AuthModal onClose={() => setShowAuth(false)} onAuth={handleAuth} />
+        <AuthModal onClose={handleCloseAuth} onAuth={handleAuthSuccess} resetToken={resetToken} />
       )}
     </div>
   )

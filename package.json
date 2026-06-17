@@ -8,17 +8,19 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/logic.mjs && node tests/trend.mjs && node tests/calculate.mjs && node tests/db.mjs && node tests/auth.mjs"
+    "test": "node tests/logic.mjs && node tests/trend.mjs && node tests/calculate.mjs && node tests/db.mjs && node tests/auth.mjs && node tests/reset-password.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "postgres": "^3.4.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "resend": "^6.12.4"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.2",
+    "@playwright/test": "^1.61.0",
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.0"
   }

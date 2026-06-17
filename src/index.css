@@ -376,6 +376,20 @@ select:focus {
   margin-top: 10px;
 }
 
+.link-btn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin: -8px 0 16px;
+  align-self: flex-start;
+}
+.link-btn:hover { color: var(--ink); }
+
 /* ---------- results ---------- */
 .results-empty {
   color: var(--ink-faint);
